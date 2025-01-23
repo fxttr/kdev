@@ -23,18 +23,6 @@
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
 
-      runQemu = pkgs.writeShellScriptBin "runvm" ''
-        [ ! -f "./initramfs.cpio.gz" ] && ./build-initramfs.sh
-
-        sudo ${pkgs.qemu}/bin/qemu-system-x86_64 \
-                -enable-kvm \
-                -m 1G \
-                -kernel ''$(find "''${PWD}" -maxdepth 5 -name bzImage | head -n 1) \
-                -initrd ./initramfs.cpio.gz \
-                -nographic -append "console=ttyS0" \
-                -s
-      '';
-
       runGdb = pkgs.writeShellScriptBin "rungdb" ''
         ${pkgs.gdb}/bin/gdb \
                 -ex "file ''${SRC_DIR}/vmlinux" \
@@ -56,13 +44,14 @@
               })
 
               nixpkgs-fmt
-              bear # for compile_commands.json, use bear -- make
-              runQemu
               runGdb
               wget
               qemu
+              guestfs-tools
+              libguestfs-with-appliance
               pkg-config
               ripgrep
+              socat
 
               # We build with LLVM
               clang-tools

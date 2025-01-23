@@ -19,5 +19,4 @@ result-dev
 
 .direnv/
 linux/
-initramfs.cpio.gz
-*.qcow2
+vm/

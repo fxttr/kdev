@@ -1,0 +1,34 @@
+DEBIAN_VERSION=${DEBIAN_VERSION:-12}
+ARCH=${ARCH:-amd64}
+VM_DIR=$ENV_DIR/${BUILD_DIR:-vm/$ARCH}
+VM_FILENAME=${VM_FILENAME:-vm.qcow2}
+VM_PATH=$VM_DIR/$VM_FILENAME
+VM_STATE=$ENV_DIR/.qstate
+
+bootstrap() {
+        mkdir -p $VM_DIR
+        
+        curl -L http://cdimage.debian.org/cdimage/cloud/bookworm/daily/latest/debian-${DEBIAN_VERSION}-nocloud-${ARCH}-daily.qcow2 -O 
+        mv ./debian-${DEBIAN_VERSION}-nocloud-${ARCH}-daily.qcow2 $VM_DIR/ 
+        qemu-img create -f qcow2 -o preallocation=metadata $VM_PATH 4G
+        virt-resize --expand /dev/sda1 ${VM_DIR}/debian-12-nocloud-$ARCH-daily.qcow2 ${VM_PATH}
+}
+
+stop_vm() {
+        echo "system_powerdown" | socat - unix-connect:${VM_STATE} | tail --lines=+2 | grep -v '^(qemu)'
+}
+
+start_vm() {
+        qemu-system-x86_64 \
+                -enable-kvm \
+                -cpu host \
+                -netdev id=net00,type=user,hostfwd=tcp::2222-:22 \
+                -device virtio-net-pci,netdev=net00 \
+                -m 4G \
+                -drive if=virtio,format=qcow2,file=${VM_PATH} \
+                -monitor unix:${VM_STATE},server,nowait \
+                -nographic \
+                -s
+}
+
+"$@"
